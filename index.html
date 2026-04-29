@@ -1,0 +1,2125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Integrating AI into Daily College Study</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --surface: rgba(255, 255, 255, 0.74);
+      --surface-strong: rgba(255, 255, 255, 0.92);
+      --ink: #0b0d12;
+      --muted: #6b7280;
+      --line: rgba(15, 23, 42, 0.1);
+      --blue: #2377ff;
+      --blue-soft: #dbeafe;
+      --silver: #eef2f7;
+      --shadow: 0 28px 80px rgba(15, 23, 42, 0.12);
+      --shadow-soft: 0 16px 48px rgba(15, 23, 42, 0.08);
+      --radius-xl: 34px;
+      --radius-lg: 24px;
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      z-index: 0;
+      width: 48vw;
+      height: 48vw;
+      border-radius: 999px;
+      filter: blur(70px);
+      opacity: 0.68;
+      pointer-events: none;
+      transform: translate3d(var(--mx, 0px), var(--my, 0px), 0);
+      transition: transform 900ms cubic-bezier(.2,.8,.2,1);
+    }
+
+    body::before {
+      top: -20vw;
+      right: -12vw;
+      background: radial-gradient(circle, rgba(96, 165, 250, 0.32), rgba(255, 255, 255, 0) 66%);
+    }
+
+    body::after {
+      left: -20vw;
+      bottom: -24vw;
+      background: radial-gradient(circle, rgba(203, 213, 225, 0.64), rgba(255, 255, 255, 0) 68%);
+    }
+
+    .shared-orb {
+      --orb-x: 50%;
+      --orb-y: 50%;
+      --orb-size: 420px;
+      --orb-scale: 1;
+      --orb-opacity: 0;
+      --orb-blur: 0px;
+      position: fixed;
+      left: var(--orb-x);
+      top: var(--orb-y);
+      width: var(--orb-size);
+      height: var(--orb-size);
+      border-radius: 999px;
+      pointer-events: none;
+      z-index: 0;
+      opacity: var(--orb-opacity);
+      transform: translate(-50%, -50%) scale(var(--orb-scale));
+      transform-origin: center;
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.94), rgba(96,165,250,0.34) 32%, rgba(191,219,254,0.16) 70%);
+      box-shadow: inset 0 0 86px rgba(255,255,255,0.88), 0 42px 110px rgba(59,130,246,0.16);
+      filter: blur(var(--orb-blur));
+      transition:
+        left 900ms cubic-bezier(.19, 1, .22, 1),
+        top 900ms cubic-bezier(.19, 1, .22, 1),
+        width 900ms cubic-bezier(.19, 1, .22, 1),
+        height 900ms cubic-bezier(.19, 1, .22, 1),
+        transform 900ms cubic-bezier(.19, 1, .22, 1),
+        opacity 700ms ease,
+        background 900ms cubic-bezier(.19, 1, .22, 1),
+        box-shadow 900ms cubic-bezier(.19, 1, .22, 1),
+        filter 900ms cubic-bezier(.19, 1, .22, 1);
+      will-change: left, top, width, height, transform, opacity;
+    }
+
+    .shared-orb.is-soft {
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.95), rgba(147,197,253,0.32) 34%, rgba(191,219,254,0.14) 72%);
+      box-shadow: inset 0 0 76px rgba(255,255,255,0.88), 0 30px 80px rgba(59,130,246,0.12);
+    }
+
+    .shared-orb.is-workspace {
+      background: radial-gradient(circle at 38% 28%, rgba(255,255,255,.98), rgba(191,219,254,.72) 35%, rgba(219,234,254,.30) 70%);
+      box-shadow: inset 0 0 68px rgba(255,255,255,.94), 0 32px 90px rgba(37,99,235,.18);
+    }
+
+    .shared-orb.is-compact {
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.98), rgba(96,165,250,0.46) 34%, rgba(147,197,253,0.22) 72%);
+      box-shadow: inset 0 0 72px rgba(255,255,255,0.90), 0 28px 72px rgba(37,99,235,0.18);
+    }
+
+
+    .shared-orb::before,
+    .shared-orb::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .shared-orb::before {
+      border: 2px solid rgba(37,99,235,0.38);
+      background: radial-gradient(circle, rgba(96,165,250,0.18), rgba(255,255,255,0) 62%);
+    }
+
+    .shared-orb::after {
+      inset: 18%;
+      background: radial-gradient(circle, rgba(255,255,255,0.98), rgba(147,197,253,0.44) 42%, rgba(255,255,255,0) 74%);
+      filter: blur(3px);
+    }
+
+    .shared-orb.is-complete-feedback {
+      animation: orbCompletionElastic 1360ms cubic-bezier(.22, 1, .36, 1);
+    }
+
+    .shared-orb.is-complete-feedback::before {
+      animation: orbCompletionRipple 1360ms cubic-bezier(.16, 1, .3, 1);
+    }
+
+    .shared-orb.is-complete-feedback::after {
+      animation: orbCompletionFlash 1360ms cubic-bezier(.16, 1, .3, 1);
+    }
+
+    @keyframes orbCompletionElastic {
+      0% {
+        transform: translate(-50%, -50%) scale(var(--orb-scale));
+        filter: blur(var(--orb-blur)) saturate(1) brightness(1);
+        box-shadow: inset 0 0 68px rgba(255,255,255,.94), 0 32px 90px rgba(37,99,235,.18);
+      }
+      22% {
+        transform: translate(-50%, -50%) scale(calc(var(--orb-scale) * 1.18));
+        filter: blur(var(--orb-blur)) saturate(1.34) brightness(1.11);
+        box-shadow: inset 0 0 98px rgba(255,255,255,.99), 0 0 0 16px rgba(37,99,235,.085), 0 46px 135px rgba(37,99,235,.34);
+      }
+      42% {
+        transform: translate(-50%, -50%) scale(calc(var(--orb-scale) * .94));
+        filter: blur(var(--orb-blur)) saturate(1.22) brightness(1.055);
+        box-shadow: inset 0 0 88px rgba(255,255,255,.97), 0 0 0 30px rgba(96,165,250,.052), 0 38px 112px rgba(37,99,235,.24);
+      }
+      61% {
+        transform: translate(-50%, -50%) scale(calc(var(--orb-scale) * 1.055));
+        filter: blur(var(--orb-blur)) saturate(1.16) brightness(1.035);
+        box-shadow: inset 0 0 82px rgba(255,255,255,.96), 0 0 0 44px rgba(96,165,250,.032), 0 35px 104px rgba(37,99,235,.21);
+      }
+      78% {
+        transform: translate(-50%, -50%) scale(calc(var(--orb-scale) * .988));
+        filter: blur(var(--orb-blur)) saturate(1.08) brightness(1.015);
+        box-shadow: inset 0 0 74px rgba(255,255,255,.95), 0 0 0 56px rgba(147,197,253,.016), 0 33px 96px rgba(37,99,235,.19);
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(var(--orb-scale));
+        filter: blur(var(--orb-blur)) saturate(1) brightness(1);
+        box-shadow: inset 0 0 68px rgba(255,255,255,.94), 0 32px 90px rgba(37,99,235,.18);
+      }
+    }
+
+    @keyframes orbCompletionRipple {
+      0% {
+        transform: scale(.48);
+        opacity: 0;
+        border-width: 2px;
+        box-shadow: 0 0 0 0 rgba(37,99,235,0), inset 0 0 40px rgba(96,165,250,.12);
+      }
+      12% {
+        opacity: .88;
+      }
+      38% {
+        opacity: .54;
+        box-shadow: 0 0 0 18px rgba(37,99,235,.07), inset 0 0 64px rgba(96,165,250,.10);
+      }
+      72% {
+        opacity: .22;
+        box-shadow: 0 0 0 44px rgba(96,165,250,.035), inset 0 0 72px rgba(96,165,250,.06);
+      }
+      100% {
+        transform: scale(1.82);
+        opacity: 0;
+        border-width: 1px;
+        box-shadow: 0 0 0 72px rgba(147,197,253,0), inset 0 0 84px rgba(96,165,250,0);
+      }
+    }
+
+    @keyframes orbCompletionFlash {
+      0% { transform: scale(.42); opacity: 0; }
+      18% { transform: scale(.82); opacity: .82; }
+      44% { transform: scale(1.06); opacity: .36; }
+      100% { transform: scale(1.34); opacity: 0; }
+    }
+
+    .deck {
+      position: relative;
+      z-index: 1;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .track {
+      height: 100%;
+      display: flex;
+      transition: transform 900ms cubic-bezier(.19, 1, .22, 1);
+      will-change: transform;
+    }
+
+    .slide {
+      position: relative;
+      flex: 0 0 100vw;
+      height: 100vh;
+      padding: clamp(42px, 6vw, 86px);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+    }
+
+    .slide-inner {
+      width: min(1180px, 100%);
+      height: min(690px, calc(100vh - 96px));
+      position: relative;
+      display: grid;
+      align-items: center;
+    }
+
+    .kicker {
+      color: var(--blue);
+      font-size: clamp(13px, 1.35vw, 16px);
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    h1 {
+      font-size: clamp(52px, 7.4vw, 104px);
+      line-height: 0.94;
+      letter-spacing: -0.07em;
+      font-weight: 760;
+    }
+
+    h2 {
+      font-size: clamp(42px, 5.3vw, 76px);
+      line-height: 0.97;
+      letter-spacing: -0.058em;
+      font-weight: 740;
+    }
+
+    h3 {
+      font-size: clamp(24px, 2.5vw, 34px);
+      line-height: 1.05;
+      letter-spacing: -0.035em;
+      font-weight: 720;
+    }
+
+    .gradient-title {
+      background-image: linear-gradient(135deg, #0f172a 0%, #1e3a8a 26%, #2563eb 52%, #60a5fa 76%, #dbeafe 100%);
+      background-size: 180% 180%;
+      background-position: 0% 50%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 10px 28px rgba(59, 130, 246, 0.08);
+    }
+
+    .subtitle {
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: clamp(20px, 2vw, 27px);
+      line-height: 1.35;
+      max-width: 780px;
+      letter-spacing: -0.02em;
+    }
+
+    .meta {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      font-size: 17px;
+    }
+
+    .center { text-align: center; }
+    .center .subtitle { margin-left: auto; margin-right: auto; }
+
+    .hero-glass {
+      position: absolute;
+      right: 2%;
+      top: 8%;
+      width: min(390px, 34vw);
+      height: min(390px, 34vw);
+      border-radius: 42px;
+      background:
+        radial-gradient(circle at 30% 25%, rgba(255,255,255,0.9), rgba(255,255,255,0) 36%),
+        linear-gradient(145deg, rgba(255,255,255,0.86), rgba(226,232,240,0.42));
+      border: 1px solid rgba(255,255,255,0.72);
+      box-shadow: var(--shadow-soft);
+      transform: rotate(-5deg);
+      opacity: 0.86;
+    }
+
+    .hero-glass::before, .hero-glass::after {
+      content: "";
+      position: absolute;
+      border-radius: inherit;
+      inset: 26px;
+      border: 1px solid rgba(35, 119, 255, 0.18);
+    }
+
+    .hero-glass::after {
+      inset: 72px;
+      background: linear-gradient(135deg, rgba(35, 119, 255, 0.13), rgba(255,255,255,0.24));
+      border: none;
+      filter: blur(0.2px);
+    }
+
+    .grid-two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(24px, 4vw, 58px);
+      align-items: center;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 32px;
+      max-width: 850px;
+    }
+
+    .pill {
+      padding: 13px 18px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.68);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      box-shadow: 0 12px 35px rgba(15, 23, 42, 0.055);
+      font-size: 18px;
+      font-weight: 650;
+      color: #1f2937;
+      letter-spacing: -0.015em;
+      backdrop-filter: blur(18px);
+    }
+
+    .focus-box {
+      margin-top: 40px;
+      padding: 30px;
+      border-radius: var(--radius-xl);
+      background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(241,245,249,0.66));
+      border: 1px solid rgba(255,255,255,0.78);
+      box-shadow: var(--shadow-soft);
+      max-width: 780px;
+    }
+
+    .focus-title {
+      color: var(--muted);
+      font-size: 15px;
+      font-weight: 760;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .focus-items {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .focus-item {
+      padding: 22px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(15, 23, 42, 0.07);
+      font-size: 23px;
+      line-height: 1.16;
+      letter-spacing: -0.04em;
+      font-weight: 740;
+    }
+
+    .divider-title {
+      font-size: clamp(56px, 8vw, 108px);
+      max-width: 1050px;
+      margin: 0 auto;
+    }
+
+    .divider-orb {
+      position: absolute;
+      width: 520px;
+      height: 520px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.9), rgba(147,197,253,0.25) 32%, rgba(226,232,240,0.08) 70%);
+      filter: blur(0.2px);
+      box-shadow: inset 0 0 90px rgba(255,255,255,0.9), 0 42px 110px rgba(59,130,246,0.12);
+      opacity: 0.85;
+      z-index: -1;
+    }
+
+    .file-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 30px;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 15px 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.74);
+      border: 1px solid rgba(15,23,42,0.08);
+      color: #1f2937;
+      font-weight: 650;
+      font-size: 18px;
+      box-shadow: 0 10px 26px rgba(15, 23, 42, 0.045);
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--blue);
+      box-shadow: 0 0 0 6px rgba(35,119,255,0.12);
+      flex: 0 0 auto;
+    }
+
+    .key-line {
+      margin-top: 28px;
+      padding: 18px 20px;
+      border-left: 3px solid var(--blue);
+      color: #111827;
+      font-size: clamp(20px, 2vw, 25px);
+      font-weight: 720;
+      letter-spacing: -0.035em;
+      line-height: 1.24;
+      background: rgba(255,255,255,0.52);
+      border-radius: 0 18px 18px 0;
+      max-width: 700px;
+    }
+
+    .project-visual {
+      position: relative;
+      min-height: 520px;
+      display: grid;
+      place-items: center;
+    }
+
+    .project-orb {
+      position: absolute;
+      width: 450px;
+      height: 450px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 38% 28%, rgba(255,255,255,.98), rgba(191,219,254,.72) 35%, rgba(219,234,254,.30) 70%);
+      box-shadow: inset 0 0 68px rgba(255,255,255,.94), 0 32px 90px rgba(37,99,235,.18);
+    }
+
+    .divider-orb,
+    .project-orb {
+      opacity: 0 !important;
+      visibility: hidden !important;
+    }
+
+    .workspace {
+      position: relative;
+      width: 390px;
+      padding: 22px;
+      border-radius: 32px;
+      background: rgba(255, 255, 255, 0.76);
+      border: 1px solid rgba(255,255,255,0.86);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(24px);
+    }
+
+    .workspace-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .ai-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 46px;
+      height: 46px;
+      border-radius: 15px;
+      background: linear-gradient(135deg, #111827, #3b82f6);
+      color: white;
+      font-weight: 760;
+      letter-spacing: -0.04em;
+      box-shadow: 0 14px 28px rgba(37, 99, 235, 0.22);
+    }
+
+    .mini-lines { flex: 1; margin-left: 14px; }
+    .mini-line { height: 9px; border-radius: 999px; background: #e5e7eb; margin: 7px 0; }
+    .mini-line:nth-child(1) { width: 74%; background: #111827; opacity: .92; }
+    .mini-line:nth-child(2) { width: 56%; }
+
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .workspace-card {
+      min-height: 98px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(248,250,252,.95), rgba(255,255,255,.68));
+      border: 1px solid rgba(15,23,42,0.06);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      color: #1f2937;
+      font-weight: 720;
+      letter-spacing: -0.03em;
+    }
+
+    .mini-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 11px;
+      background: rgba(35,119,255,.12);
+    }
+
+    .floating-doc {
+      position: absolute;
+      width: 130px;
+      padding: 15px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(255,255,255,0.86);
+      box-shadow: 0 20px 55px rgba(15,23,42,0.09);
+      font-weight: 720;
+      color: #374151;
+      letter-spacing: -0.03em;
+      backdrop-filter: blur(20px);
+    }
+
+    .floating-doc::before {
+      content: "";
+      display: block;
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, rgba(35,119,255,.18), rgba(255,255,255,.9));
+    }
+
+    .doc-a { left: 0; top: 60px; }
+    .doc-b { left: 26px; bottom: 90px; }
+    .doc-c { right: 0; top: 104px; }
+
+    .flow-line {
+      position: absolute;
+      height: 2px;
+      width: 90px;
+      background: linear-gradient(90deg, transparent, rgba(35,119,255,.5), transparent);
+      opacity: .9;
+    }
+
+    .line-a { left: 128px; top: 144px; transform: rotate(14deg); }
+    .line-b { left: 146px; bottom: 184px; transform: rotate(-13deg); }
+    .line-c { right: 126px; top: 188px; transform: rotate(-12deg); }
+
+    /* Course-specific AI Project drag-and-drop slide */
+    .course-project-slide .slide-inner {
+      width: min(1180px, 100%);
+      height: min(720px, calc(100vh - 96px));
+      display: block;
+      align-items: initial;
+    }
+
+    .course-project-inner {
+      isolation: isolate;
+    }
+
+    .course-project-copy {
+      position: absolute;
+      z-index: 6;
+      left: 0;
+      top: 150px;
+      width: min(430px, 34vw);
+    }
+
+    .course-project-copy h2 {
+      font-size: clamp(48px, 5.35vw, 82px);
+      max-width: 480px;
+    }
+
+    .course-project-copy .key-line {
+      max-width: 420px;
+      margin-top: 32px;
+      background: rgba(255,255,255,0.62);
+      backdrop-filter: blur(20px);
+    }
+
+    .course-project-stage {
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .drag-guide {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      overflow: visible;
+      pointer-events: none;
+      opacity: 0.9;
+    }
+
+    .drag-guide path {
+      fill: none;
+      stroke: rgba(35,119,255,0.72);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-dasharray: 8 12;
+      animation: guideDash 2.5s linear infinite;
+      filter: drop-shadow(0 8px 18px rgba(37,99,235,0.12));
+    }
+
+    @keyframes guideDash {
+      from { stroke-dashoffset: 0; }
+      to { stroke-dashoffset: -40; }
+    }
+
+    .ai-project-workspace {
+      position: absolute;
+      left: min(625px, 53%);
+      top: 82px;
+      width: 410px;
+      min-height: 470px;
+      z-index: 3;
+      padding: 20px;
+      pointer-events: auto;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(255,255,255,0.88);
+      box-shadow: 0 34px 90px rgba(15,23,42,0.12);
+    }
+
+    .ai-project-header {
+      justify-content: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .ai-project-title {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      flex: 1;
+      color: #0f172a;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: -0.045em;
+      font-weight: 780;
+    }
+
+    .ai-project-title::after {
+      content: "";
+      display: block;
+      flex: 1;
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(15,23,42,0.14), rgba(15,23,42,0.06), transparent);
+    }
+
+    .ai-drop-zone {
+      position: relative;
+      min-height: 355px;
+      border-radius: 28px;
+      border: 2px dashed rgba(35,119,255,0.58);
+      background:
+        radial-gradient(circle at 50% 45%, rgba(59,130,246,0.16), rgba(255,255,255,0) 42%),
+        linear-gradient(145deg, rgba(248,250,252,0.42), rgba(255,255,255,0.62));
+      overflow: hidden;
+      display: grid;
+      place-items: center;
+      transition:
+        border-color 260ms ease,
+        background 260ms ease,
+        box-shadow 260ms ease,
+        transform 260ms ease;
+    }
+
+    .ai-drop-zone::before,
+    .ai-drop-zone::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 48%;
+      width: 230px;
+      height: 230px;
+      border-radius: 999px;
+      transform: translate(-50%, -50%);
+      background: rgba(59,130,246,0.075);
+      pointer-events: none;
+    }
+
+    .ai-drop-zone::after {
+      width: 330px;
+      height: 330px;
+      opacity: 0.52;
+    }
+
+    .ai-drop-zone.is-hot {
+      border-color: rgba(35,119,255,0.96);
+      background:
+        radial-gradient(circle at 50% 45%, rgba(59,130,246,0.26), rgba(255,255,255,0) 45%),
+        linear-gradient(145deg, rgba(239,246,255,0.78), rgba(255,255,255,0.72));
+      box-shadow: inset 0 0 0 6px rgba(59,130,246,0.08), 0 24px 70px rgba(37,99,235,0.16);
+      transform: scale(1.012);
+    }
+
+    .ai-drop-zone.is-complete {
+      animation: dropPulse 720ms cubic-bezier(.19, 1, .22, 1);
+    }
+
+    @keyframes dropPulse {
+      0% { box-shadow: inset 0 0 0 0 rgba(37,99,235,0.00), 0 0 0 0 rgba(37,99,235,0.00); }
+      35% { box-shadow: inset 0 0 0 8px rgba(37,99,235,0.11), 0 0 0 18px rgba(37,99,235,0.10); }
+      100% { box-shadow: inset 0 0 0 0 rgba(37,99,235,0.00), 0 0 0 38px rgba(37,99,235,0.00); }
+    }
+
+    .drop-copy {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+      color: #2377ff;
+      text-align: center;
+      font-size: 17px;
+      font-weight: 760;
+      letter-spacing: -0.025em;
+      transition: opacity 260ms ease, transform 260ms ease;
+    }
+
+    .ai-drop-zone.has-items .drop-copy {
+      opacity: 0.18;
+      transform: translateY(-8px) scale(0.94);
+    }
+
+    .drop-icon {
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      border: 2px solid rgba(35,119,255,0.72);
+      background: rgba(255,255,255,0.66);
+      box-shadow: 0 14px 38px rgba(37,99,235,0.14);
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .drop-copy span {
+      display: block;
+      max-width: 220px;
+      color: #2563eb;
+      font-size: 15px;
+      font-weight: 720;
+      line-height: 1.25;
+    }
+
+    .dropped-grid {
+      position: absolute;
+      inset: 0;
+      z-index: 4;
+      pointer-events: none;
+    }
+
+    .context-card {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 196px;
+      min-height: 60px;
+      padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,0.86);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.86);
+      color: #1f2937;
+      box-shadow: 0 18px 50px rgba(15,23,42,0.09);
+      backdrop-filter: blur(20px);
+      display: grid;
+      grid-template-columns: 34px 1fr 18px;
+      gap: 12px;
+      align-items: center;
+      font-family: var(--font);
+      font-size: 16px;
+      line-height: 1.12;
+      letter-spacing: -0.03em;
+      font-weight: 730;
+      text-align: left;
+      cursor: grab;
+      pointer-events: auto;
+      user-select: none;
+      touch-action: none;
+      z-index: 8;
+      transform: translate3d(var(--x), var(--y), 0) rotate(var(--r));
+      transition:
+        transform 480ms cubic-bezier(.19, 1, .22, 1),
+        box-shadow 260ms ease,
+        border-color 260ms ease,
+        background 260ms ease,
+        opacity 260ms ease;
+    }
+
+    .context-card::before {
+      content: "";
+      display: block;
+      width: 32px;
+      height: 32px;
+      border-radius: 11px;
+      background: linear-gradient(135deg, rgba(35,119,255,.18), rgba(255,255,255,.92));
+      box-shadow: inset 0 0 14px rgba(255,255,255,0.85);
+    }
+
+    .context-card:hover {
+      border-color: rgba(147,197,253,0.82);
+      box-shadow: 0 24px 62px rgba(37,99,235,0.14);
+      background: rgba(255,255,255,0.94);
+    }
+
+    .context-card:active,
+    .context-card.is-dragging {
+      cursor: grabbing;
+    }
+
+    .context-card.is-dragging {
+      z-index: 30;
+      transform: translate3d(var(--x), var(--y), 0) rotate(0deg) scale(1.055);
+      transition: none;
+      box-shadow: 0 36px 90px rgba(37,99,235,0.22);
+      border-color: rgba(35,119,255,0.58);
+      background: rgba(255,255,255,0.96);
+    }
+
+    .context-card.is-dropped {
+      width: 166px;
+      min-height: 48px;
+      padding: 9px 11px;
+      grid-template-columns: 28px 1fr 14px;
+      border-color: rgba(147,197,253,0.56);
+      background: rgba(255,255,255,0.88);
+      box-shadow: 0 16px 38px rgba(37,99,235,0.12);
+      z-index: 12;
+    }
+
+    .context-card.is-dropped::before {
+      width: 27px;
+      height: 27px;
+      border-radius: 9px;
+    }
+
+    .context-card.is-dropped .drag-card-label {
+      font-size: 13px;
+      line-height: 1.08;
+    }
+
+    .context-card.is-dropped .grab-dots {
+      opacity: 0.26;
+    }
+
+    .drag-card-label {
+      pointer-events: none;
+    }
+
+    .grab-dots {
+      width: 16px;
+      height: 24px;
+      opacity: 0.52;
+      background-image: radial-gradient(circle, rgba(71,85,105,0.62) 1.4px, transparent 1.8px);
+      background-size: 7px 7px;
+      background-position: center;
+      pointer-events: none;
+    }
+
+    .card-syllabus { --x: 430px; --y: 12px; --r: 0deg; }
+    .card-lecture { --x: 470px; --y: 120px; --r: 2.5deg; }
+    .card-assignment { --x: 335px; --y: 230px; --r: -3.5deg; }
+    .card-rubrics { --x: 455px; --y: 315px; --r: 1.5deg; }
+    .card-reading { --x: 360px; --y: 440px; --r: -1deg; }
+    .card-personal { --x: 495px; --y: 548px; --r: 3deg; }
+    .card-course { --x: 980px; --y: 92px; --r: 5deg; }
+    .card-notes { --x: 998px; --y: 240px; --r: 0deg; }
+    .card-resources { --x: 970px; --y: 395px; --r: -1deg; }
+    .card-output { --x: 985px; --y: 545px; --r: 4deg; }
+
+    .demo-cursor {
+      position: absolute;
+      z-index: 6;
+      left: 815px;
+      top: 295px;
+      width: 34px;
+      height: 34px;
+      color: #0f172a;
+      filter: drop-shadow(0 10px 16px rgba(15,23,42,0.18));
+      pointer-events: none;
+      animation: cursorNudge 2.9s ease-in-out infinite;
+    }
+
+    @keyframes cursorNudge {
+      0%, 100% { transform: translate(0, 0) rotate(-8deg); opacity: 0.85; }
+      50% { transform: translate(16px, -10px) rotate(-8deg); opacity: 1; }
+    }
+
+
+    .benefit-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 34px;
+    }
+
+    .benefit {
+      min-height: 148px;
+      padding: 23px;
+      border-radius: 28px;
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(255,255,255,0.86);
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      backdrop-filter: blur(18px);
+    }
+
+    .benefit span {
+      color: var(--blue);
+      font-size: 14px;
+      font-weight: 800;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+    }
+
+    .benefit strong {
+      font-size: 23px;
+      line-height: 1.1;
+      letter-spacing: -0.045em;
+    }
+
+    .formula {
+      margin-top: 32px;
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 24px;
+      border-radius: 999px;
+      background: rgba(17, 24, 39, 0.94);
+      color: white;
+      box-shadow: 0 22px 55px rgba(15,23,42,.18);
+      font-size: clamp(19px, 1.8vw, 25px);
+      font-weight: 720;
+      letter-spacing: -0.035em;
+    }
+
+    .compare-stage {
+      margin-top: 34px;
+      position: relative;
+      padding: 24px;
+      border-radius: 34px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.54), rgba(255,255,255,0.38));
+      border: 1px solid rgba(255,255,255,0.74);
+      box-shadow: 0 30px 72px rgba(15,23,42,0.08);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+    }
+
+    .compare-stage::before {
+      content: '';
+      position: absolute;
+      inset: auto -5% -26% auto;
+      width: 360px;
+      height: 360px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(96,165,250,0.16), rgba(255,255,255,0) 70%);
+      pointer-events: none;
+    }
+
+    .compare-panel {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .compare-divider {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 78px;
+      height: 78px;
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: 1px solid transparent;
+      box-shadow: none;
+      color: #2563eb;
+      font-size: 14px;
+      font-weight: 760;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .compare-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding: 24px;
+      min-height: 336px;
+      border-radius: 28px;
+      background: rgba(255,255,255,0.76);
+      border: 1px solid rgba(255,255,255,0.86);
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(20px);
+    }
+
+    .compare-card-dark {
+      background: linear-gradient(145deg, rgba(223,233,249,0.96), rgba(206,221,244,0.94));
+      border: 1px solid rgba(147,197,253,0.70);
+      box-shadow: 0 24px 68px rgba(37,99,235,0.10);
+    }
+
+    .compare-card-dark .compare-label {
+      background: rgba(37,99,235,0.13);
+      border: 1px solid rgba(37,99,235,0.18);
+      color: #1e40af;
+    }
+
+    .compare-card-dark .compare-item {
+      background: rgba(255,255,255,0.68);
+      border: 1px solid rgba(147,197,253,0.50);
+    }
+
+    .compare-divider[data-reveal] {
+      transform: translate(-50%, -50%) translateY(28px) scale(.985);
+    }
+
+    .active .compare-divider[data-reveal] {
+      transform: translate(-50%, -50%) translateY(0) scale(1);
+    }
+
+    .compare-label {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(59,130,246,0.08);
+      border: 1px solid rgba(59,130,246,0.12);
+      color: #2563eb;
+      font-size: 12px;
+      font-weight: 760;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .compare-card h3 {
+      margin: 0;
+      font-size: clamp(28px, 3vw, 41px);
+      line-height: 1.03;
+      letter-spacing: -0.04em;
+      color: #0f172a;
+      max-width: 92%;
+    }
+
+    .compare-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 12px;
+      margin-top: auto;
+    }
+
+    .compare-item {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-height: 58px;
+      padding: 16px 18px;
+      border-radius: 18px;
+      background: rgba(248,250,252,0.84);
+      border: 1px solid rgba(226,232,240,0.76);
+      color: #1f2937;
+      font-size: 21px;
+      font-weight: 650;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+    }
+
+    .compare-icon {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: #3b82f6;
+      box-shadow: 0 0 0 6px rgba(59,130,246,0.12);
+      flex: 0 0 auto;
+    }
+
+    .compare-note {
+      position: relative;
+      z-index: 1;
+      margin-top: 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 20px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.70);
+      border: 1px solid rgba(255,255,255,0.82);
+      box-shadow: 0 16px 40px rgba(15,23,42,0.06);
+      color: #0f172a;
+      font-size: 19px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+
+    .compare-note .note-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, #1d4ed8, #60a5fa);
+      box-shadow: 0 0 0 7px rgba(59,130,246,0.10);
+      flex: 0 0 auto;
+    }
+
+    .question-title {
+      font-size: clamp(50px, 6.5vw, 88px);
+      line-height: 0.98;
+      letter-spacing: -0.062em;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .workflow {
+      margin-top: 42px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 16px;
+      position: relative;
+      isolation: isolate;
+    }
+
+    .workflow-line {
+      position: absolute;
+      inset: -18px -10px -20px -10px;
+      z-index: 0;
+      width: calc(100% + 20px);
+      height: calc(100% + 38px);
+      overflow: visible;
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .workflow-line .workflow-thread,
+    .workflow-line .workflow-thread-blur {
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 2800;
+      stroke-dashoffset: 2800;
+    }
+
+    .workflow-line .workflow-thread-blur {
+      stroke: rgba(35,119,255,0.18);
+      stroke-width: 8;
+      filter: blur(3.5px);
+    }
+
+    .workflow-line .workflow-thread {
+      stroke: rgba(29,78,216,0.82);
+      stroke-width: 4.2;
+      filter: drop-shadow(0 4px 8px rgba(37,99,235,0.16));
+    }
+
+    .workflow-line .workflow-loop-glow {
+      fill: rgba(59,130,246,0.025);
+      stroke: rgba(37,99,235,0.24);
+      stroke-width: 1.6;
+      opacity: 0;
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+
+    .active .workflow-line {
+      animation: workflowLineFade 420ms ease forwards;
+      animation-delay: 1850ms;
+    }
+
+    .active .workflow-line .workflow-thread,
+    .active .workflow-line .workflow-thread-blur {
+      animation: workflowThreadDraw 18000ms cubic-bezier(.19, 1, .22, 1) forwards;
+      animation-delay: 1850ms;
+    }
+
+    .active .workflow-line .workflow-loop-glow {
+      animation: workflowLoopPulse 1800ms cubic-bezier(.19, 1, .22, 1) forwards;
+      animation-delay: 5050ms;
+    }
+
+    @keyframes workflowLineFade {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes workflowThreadDraw {
+      to { stroke-dashoffset: 0; }
+    }
+
+    @keyframes workflowLoopPulse {
+      0% { opacity: 0; transform: scale(.72); }
+      35% { opacity: .62; transform: scale(1.025); }
+      100% { opacity: .44; transform: scale(1); }
+    }
+
+    .step {
+      position: relative;
+      z-index: 2;
+      min-height: 132px;
+      padding: 20px;
+      border-radius: 26px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.24), rgba(248,250,252,0.10));
+      border: 1px solid rgba(255,255,255,0.36);
+      box-shadow: 0 12px 30px rgba(15,23,42,0.042), inset 0 1px 0 rgba(255,255,255,0.42);
+      backdrop-filter: blur(14px) saturate(1.16);
+      -webkit-backdrop-filter: blur(14px) saturate(1.16);
+      overflow: hidden;
+    }
+
+    .step::after {
+      content: "";
+      position: absolute;
+      inset: auto -30% -60% auto;
+      width: 120px;
+      height: 120px;
+      border-radius: 999px;
+      background: rgba(35,119,255,0.026);
+      filter: blur(5px);
+    }
+
+    .step-number {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--blue);
+      letter-spacing: .12em;
+      margin-bottom: 18px;
+    }
+
+    .step strong {
+      display: block;
+      font-size: 23px;
+      line-height: 1.07;
+      letter-spacing: -0.045em;
+    }
+
+    .turn-grid {
+      margin-top: 42px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 22px;
+      max-width: 960px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .turn-card {
+      padding: 34px;
+      border-radius: var(--radius-xl);
+      background: rgba(255,255,255,0.72);
+      border: 1px solid rgba(255,255,255,0.86);
+      box-shadow: var(--shadow-soft);
+      backdrop-filter: blur(20px);
+      min-height: 250px;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .turn-card p {
+      color: var(--muted);
+      font-size: 20px;
+      line-height: 1.45;
+      letter-spacing: -0.02em;
+      margin-top: 18px;
+    }
+
+    .thanks {
+      font-size: clamp(70px, 10vw, 140px);
+      letter-spacing: -0.075em;
+    }
+
+    .bottom-name {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      color: var(--muted);
+      font-size: 18px;
+      font-weight: 650;
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+
+    [data-reveal] {
+      opacity: 0;
+      transform: translateY(28px) scale(.985);
+      filter: blur(10px);
+      transition:
+        opacity 900ms cubic-bezier(.19, 1, .22, 1),
+        transform 900ms cubic-bezier(.19, 1, .22, 1),
+        filter 900ms cubic-bezier(.19, 1, .22, 1);
+      transition-delay: calc(var(--d, 0) * 95ms);
+    }
+
+    .active [data-reveal] {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+
+    .shared-orb.is-but-divider {
+      z-index: 2;
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.98), rgba(96,165,250,0.50) 34%, rgba(147,197,253,0.24) 72%);
+      box-shadow: inset 0 0 62px rgba(255,255,255,0.92), 0 20px 52px rgba(37,99,235,0.18);
+    }
+
+    .compare-divider.is-shared-orb-label[data-reveal],
+    .active .compare-divider.is-shared-orb-label[data-reveal],
+    .active .compare-divider.is-shared-orb-label.is-text-visible[data-reveal] {
+      opacity: 0;
+      color: transparent;
+      transform: translate(-50%, -50%) scale(1);
+      filter: blur(0);
+      transition-delay: 0ms;
+    }
+
+    .compare-divider-text-overlay {
+      --but-x: 50%;
+      --but-y: 50%;
+      --but-size: 78px;
+      position: fixed;
+      left: var(--but-x);
+      top: var(--but-y);
+      width: var(--but-size);
+      height: var(--but-size);
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #2563eb;
+      font-size: 14px;
+      font-weight: 760;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      pointer-events: none;
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.92);
+      filter: blur(14px);
+      transition:
+        opacity 620ms cubic-bezier(.19, 1, .22, 1),
+        transform 620ms cubic-bezier(.19, 1, .22, 1),
+        filter 620ms cubic-bezier(.19, 1, .22, 1);
+    }
+
+    .compare-divider-text-overlay.is-visible {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+      filter: blur(0);
+    }
+
+
+    .context-card[data-reveal] {
+      transform: translate3d(var(--x), var(--y), 0) rotate(var(--r)) scale(.985);
+    }
+
+    .active .context-card[data-reveal] {
+      transform: translate3d(var(--x), var(--y), 0) rotate(var(--r)) scale(1);
+    }
+
+    .active .context-card.is-dragging[data-reveal] {
+      transform: translate3d(var(--x), var(--y), 0) rotate(0deg) scale(1.055);
+      filter: blur(0);
+    }
+
+    .float-soft { animation: floatSoft 7s ease-in-out infinite; }
+    .float-soft.delay { animation-delay: -2.4s; }
+
+    @keyframes floatSoft {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-13px); }
+    }
+
+    .nav {
+      position: fixed;
+      z-index: 10;
+      right: 28px;
+      bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.68);
+      border: 1px solid rgba(255,255,255,0.85);
+      box-shadow: 0 18px 48px rgba(15,23,42,0.12);
+      backdrop-filter: blur(18px);
+    }
+
+    .nav button {
+      width: 42px;
+      height: 42px;
+      border: 0;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.06);
+      color: #111827;
+      font-size: 21px;
+      cursor: pointer;
+      transition: transform 220ms ease, background 220ms ease;
+    }
+
+    .nav button:hover { transform: translateY(-1px); background: rgba(15, 23, 42, 0.1); }
+    .counter { min-width: 54px; text-align: center; color: var(--muted); font-size: 14px; font-weight: 700; }
+
+    .progress {
+      position: fixed;
+      z-index: 11;
+      left: 0;
+      top: 0;
+      height: 3px;
+      width: 100%;
+      background: rgba(15,23,42,0.06);
+    }
+
+    .progress span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #111827, #60a5fa);
+      transition: width 700ms cubic-bezier(.19, 1, .22, 1);
+    }
+
+    .hint {
+      position: fixed;
+      z-index: 10;
+      left: 28px;
+      bottom: 30px;
+      color: rgba(107, 114, 128, 0.88);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    @media (max-width: 900px) {
+      .slide { padding: 28px; }
+      .slide-inner { height: calc(100vh - 64px); }
+      .grid-two, .turn-grid, .compare-panel { grid-template-columns: 1fr; }
+      .benefit-grid, .workflow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .project-visual { min-height: 390px; }
+      .hero-glass { display: none; }
+      .floating-doc { display: none; }
+      .flow-line { display: none; }
+      .compare-stage { padding: 18px; }
+      .compare-divider {
+        position: relative;
+        left: auto;
+        top: auto;
+        transform: none;
+        margin: 8px auto;
+        width: 68px;
+        height: 68px;
+      }
+      .compare-divider[data-reveal] {
+        transform: translateY(28px) scale(.985);
+      }
+      .active .compare-divider[data-reveal] {
+        transform: translateY(0) scale(1);
+      }
+      .compare-card h3 { max-width: 100%; }
+      .workspace { width: min(360px, 100%); }
+      .nav { right: 14px; bottom: 14px; }
+      .hint { display: none; }
+    }
+
+    @media print {
+      html, body { overflow: visible; background: white; }
+      .deck { overflow: visible; height: auto; }
+      .track { display: block; transform: none !important; }
+      .slide { height: 100vh; page-break-after: always; }
+      .nav, .progress, .hint { display: none; }
+      [data-reveal] { opacity: 1 !important; transform: none !important; filter: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+
+  <div class="shared-orb is-soft" id="sharedOrb" aria-hidden="true"></div>
+  <div class="compare-divider-text-overlay" id="compareDividerTextOverlay" aria-hidden="true">But</div>
+
+  <main class="deck" aria-label="Presentation deck">
+    <div class="track" id="track">
+      <section class="slide active">
+        <div class="slide-inner">
+          <div class="hero-glass float-soft" data-reveal style="--d: 2"></div>
+          <div>
+            <div class="kicker" data-reveal>LLM Course Presentation</div>
+            <h1 class="gradient-title" data-reveal style="--d: 1">Integrating AI into Daily College Study</h1>
+            <p class="subtitle" data-reveal style="--d: 2">Using AI to improve learning, productivity, and presentation creation.</p>
+          </div>
+          <div class="meta" data-reveal style="--d: 4">Xianzhuo Ari Yin · LLM</div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="slide-inner">
+          <div>
+            <div class="kicker" data-reveal>Strategy Map</div>
+            <h2 class="gradient-title" data-reveal style="--d: 1">AI Study Strategies</h2>
+            <div class="pill-row" data-reveal style="--d: 2">
+              <span class="pill">Course learning</span>
+              <span class="pill">Note organization</span>
+              <span class="pill">Exam preparation</span>
+              <span class="pill">Writing improvement</span>
+              <span class="pill">Research support</span>
+              <span class="pill">Presentation creation</span>
+              <span class="pill">Time management</span>
+            </div>
+            <div class="focus-box" data-reveal style="--d: 3">
+              <div class="focus-title">Focus of this presentation</div>
+              <div class="focus-items">
+                <div class="focus-item">Better Course Learning</div>
+                <div class="focus-item">Creating Presentations</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="slide-inner center">
+          <div class="divider-orb float-soft" data-reveal></div>
+          <h2 class="divider-title gradient-title" data-reveal>Better Course Learning</h2>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="slide-inner">
+          <div>
+            <div class="kicker" data-reveal>Benefits</div>
+            <h2 class="gradient-title" data-reveal style="--d: 1">Why Use AI Projects for Course Learning?</h2>
+            <div class="benefit-grid">
+              <div class="benefit" data-reveal style="--d: 2"><span>01</span><strong>Quickly get familiar with a new course</strong></div>
+              <div class="benefit" data-reveal style="--d: 3"><span>02</span><strong>Preview chapters before class</strong></div>
+              <div class="benefit" data-reveal style="--d: 4"><span>03</span><strong>Clarify questions during class</strong></div>
+              <div class="benefit" data-reveal style="--d: 5"><span>04</span><strong>Review efficiently after class</strong></div>
+              <div class="benefit" data-reveal style="--d: 6"><span>05</span><strong>Prepare effectively for exams</strong></div>
+              <div class="benefit" data-reveal style="--d: 7"><span>06</span><strong>Placeholder for visual balance</strong></div>
+            </div>
+            <div class="formula" data-reveal style="--d: 8">More context → More accurate and useful AI responses</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide course-project-slide">
+        <div class="slide-inner course-project-inner">
+          <div class="course-project-copy">
+            <div class="kicker" data-reveal>AI Projects</div>
+            <h2 class="gradient-title" data-reveal style="--d: 1">Create a Course-Specific AI Workspace</h2>
+            <div class="key-line" data-reveal style="--d: 2">Drag course materials into AI Project. Each card becomes shared context for more accurate study support.</div>
+          </div>
+
+          <div class="course-project-stage" id="courseProjectStage" aria-label="Drag course cards into the AI Project drop zone">
+            <svg class="drag-guide" viewBox="0 0 1180 720" aria-hidden="true">
+              <path d="M 540 350 C 600 275, 665 250, 725 285" />
+              <path d="M 1010 135 C 950 155, 910 210, 870 285" />
+            </svg>
+
+            <div class="workspace ai-project-workspace" id="aiProjectWorkspace" data-reveal style="--d: 4">
+              <div class="workspace-top ai-project-header">
+                <div class="ai-badge">AI</div>
+                <div class="ai-project-title">AI Project</div>
+              </div>
+              <div class="ai-drop-zone" id="aiProjectDropZone">
+                <div class="drop-copy">
+                  <div class="drop-icon">↑</div>
+                  <strong>Drop cards here</strong>
+                  <span>to build your AI project</span>
+                </div>
+                <div class="dropped-grid" id="droppedGrid" aria-hidden="true"></div>
+              </div>
+            </div>
+
+            <button class="context-card card-syllabus" type="button" data-card="Syllabus" data-reveal style="--d: 3">
+              <span class="drag-card-label">Syllabus</span><span class="grab-dots" aria-hidden="true"></span>
+            </button>
+            <button class="context-card card-lecture" type="button" data-card="Lecture slides" data-reveal style="--d: 4">
+              <span class="drag-card-label">Lecture slides</span><span class="grab-dots" aria-hidden="true"></span>
+            </button>
+            <button class="context-card card-assignment" type="button" data-card="Assignment instructions" data-reveal style="--d: 5">
+              <span class="drag-card-label">Assignment<br>instructions</span><span class="grab-dots" aria-hidden="true"></span>
+            </button>
+            <button class="context-card card-rubrics" type="button" data-card="Rubrics" data-reveal style="--d: 6">
+              <span class="drag-card-label">Rubrics</span><span class="grab-dots" aria-hidden="true"></span>
+            </button>
+            <button class="context-card card-reading" type="button" data-card="Reading materials" data-reveal style="--d: 7">
+              <span class="drag-card-label">Reading<br>materials</span><span class="grab-dots" aria-hidden="true"></span>
+            </button>
+            <button class="context-card card-personal" type="button" data-card="Personal notes" data-reveal style="--d: 8">
+              <span class="drag-card-label">Personal notes</span><span class="grab-dots" aria-hidden="true"></span>
+            </button>
+            <button class="context-card card-course" type="button" data-card="Course Data" data-reveal style="--d: 4">
+              <span class="drag-card-label">Course Data</span><span class="grab-dots" aria-hidden="true"></span>
+            </button>
+            <button class="context-card card-notes" type="button" data-card="Notes" data-reveal style="--d: 5">
+              <span class="drag-card-label">Notes</span><span class="grab-dots" aria-hidden="true"></span>
+            </button>
+            <button class="context-card card-resources" type="button" data-card="Resources" data-reveal style="--d: 6">
+              <span class="drag-card-label">Resources</span><span class="grab-dots" aria-hidden="true"></span>
+            </button>
+            <button class="context-card card-output" type="button" data-card="Study Output" data-reveal style="--d: 7">
+              <span class="drag-card-label">Study Output</span><span class="grab-dots" aria-hidden="true"></span>
+            </button>
+
+            <svg class="demo-cursor" viewBox="0 0 32 32" aria-hidden="true">
+              <path d="M8.5 3.8 25.8 18.6c.9.8.4 2.3-.8 2.3h-7.3l3.3 6.5-3.3 1.7-3.4-6.8-4.8 5.1c-.8.9-2.3.3-2.3-.9V5c0-1.1 1.3-1.7 2.3-1.2Z" fill="white" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="slide-inner center">
+          <div class="divider-orb float-soft" data-reveal></div>
+          <h2 class="divider-title gradient-title" data-reveal>Create Presentations. Save Time.</h2>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="slide-inner">
+          <div>
+            <div class="kicker" data-reveal>Presentation Reality</div>
+            <h2 class="gradient-title" data-reveal style="--d: 1">Presentations Are Everywhere</h2>
+            <div class="compare-stage">
+              <div class="compare-panel">
+                <div class="compare-card" data-reveal style="--d: 2">
+                  <div class="compare-label" data-reveal style="--d: 3">Course demand</div>
+                  <h3 data-reveal style="--d: 4">College work regularly asks for presentations</h3>
+                  <ul class="compare-list">
+                    <li class="compare-item" data-reveal style="--d: 5"><span class="compare-icon"></span>Class projects</li>
+                    <li class="compare-item" data-reveal style="--d: 6"><span class="compare-icon"></span>Group assignments</li>
+                    <li class="compare-item" data-reveal style="--d: 7"><span class="compare-icon"></span>Research reports</li>
+                    <li class="compare-item" data-reveal style="--d: 8"><span class="compare-icon"></span>Final presentations</li>
+                  </ul>
+                </div>
+                <div class="compare-divider is-shared-orb-label" data-reveal style="--d: 9">But</div>
+                <div class="compare-card compare-card-dark" data-reveal style="--d: 10">
+                  <div class="compare-label" data-reveal style="--d: 11">Common issue</div>
+                  <h3 data-reveal style="--d: 12">One-click AI slides are fast, but often miss the course context</h3>
+                  <ul class="compare-list">
+                    <li class="compare-item" data-reveal style="--d: 13"><span class="compare-icon"></span>Randomly stacked elements</li>
+                    <li class="compare-item" data-reveal style="--d: 14"><span class="compare-icon"></span>Looks obviously AI-made</li>
+                    <li class="compare-item" data-reveal style="--d: 15"><span class="compare-icon"></span>Dated, generic interface design</li>
+                    <li class="compare-item" data-reveal style="--d: 16"><span class="compare-icon"></span>No clear visual logic</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="compare-note" data-reveal style="--d: 17">
+                <span class="note-dot"></span>
+                Students need <strong>guided, course-specific slide creation</strong> rather than instant generic decks.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="slide-inner center">
+          <div class="divider-orb float-soft" data-reveal></div>
+          <h2 class="question-title gradient-title" data-reveal>How can we create presentations faster and more accurately?</h2>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="slide-inner">
+          <div>
+            <div class="kicker" data-reveal>Workflow</div>
+            <h2 class="gradient-title" data-reveal style="--d: 1">AI-Assisted Presentation Workflow</h2>
+            <p class="subtitle" data-reveal style="--d: 2">Use AI step by step instead of asking it to create everything at once.</p>
+            <div class="workflow">
+              <svg class="workflow-line" viewBox="0 0 1000 320" preserveAspectRatio="none" aria-hidden="true">
+                <path class="workflow-thread-blur" d="M 125 66 C 205 42, 290 86, 375 66 S 540 42, 625 66 S 790 88, 875 66 C 942 86, 948 186, 875 224 C 804 248, 696 205, 625 224 C 544 246, 458 205, 405 224 C 322 252, 280 168, 350 130 C 428 88, 492 196, 410 246 C 334 292, 220 230, 125 224" />
+                <path class="workflow-thread" d="M 125 66 C 205 42, 290 86, 375 66 S 540 42, 625 66 S 790 88, 875 66 C 942 86, 948 186, 875 224 C 804 248, 696 205, 625 224 C 544 246, 458 205, 405 224 C 322 252, 280 168, 350 130 C 428 88, 492 196, 410 246 C 334 292, 220 230, 125 224" />
+                <circle class="workflow-loop-glow" cx="375" cy="188" r="68" />
+              </svg>
+              <div class="step step-01" data-reveal style="--d: 3"><div class="step-number">01</div><strong>Start with a rough idea</strong></div>
+              <div class="step step-02" data-reveal style="--d: 4"><div class="step-number">02</div><strong>Clarify the structure</strong></div>
+              <div class="step step-03" data-reveal style="--d: 5"><div class="step-number">03</div><strong>Build slide content</strong></div>
+              <div class="step step-04" data-reveal style="--d: 6"><div class="step-number">04</div><strong>Add visual ideas</strong></div>
+              <div class="step step-08" data-reveal style="--d: 10"><div class="step-number">08</div><strong>Create the final version</strong></div>
+              <div class="step step-07" data-reveal style="--d: 9"><div class="step-number">07</div><strong>Revise the design</strong></div>
+              <div class="step step-06" data-reveal style="--d: 8"><div class="step-number">06</div><strong>Proofread and fact-check</strong></div>
+              <div class="step step-05" data-reveal style="--d: 7"><div class="step-number">05</div><strong>Generate HTML slides</strong></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="slide-inner center">
+          <div>
+            <div class="kicker" data-reveal>Takeaway</div>
+            <h2 class="gradient-title" data-reveal style="--d: 1">Now It’s Your Turn</h2>
+            <div class="turn-grid">
+              <div class="turn-card" data-reveal style="--d: 2">
+                <div>
+                  <h3>Better Course Learning</h3>
+                  <p>Use AI Projects to understand course materials more effectively.</p>
+                </div>
+              </div>
+              <div class="turn-card" data-reveal style="--d: 3">
+                <div>
+                  <h3>Create Presentations. Save Time.</h3>
+                  <p>Use AI to turn rough ideas into organized, polished slides.</p>
+                </div>
+              </div>
+            </div>
+            <div class="formula" data-reveal style="--d: 4">The AI Era Is Here. Make It Work for You.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide">
+        <div class="slide-inner center">
+          <div class="divider-orb float-soft" data-reveal></div>
+          <h2 class="thanks gradient-title" data-reveal>Thank You!</h2>
+          <div class="bottom-name" data-reveal style="--d: 2">Xianzhuo Ari Yin · LLM</div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="hint">Use ← → keys or click buttons</div>
+  <nav class="nav" aria-label="Slide navigation">
+    <button id="prev" aria-label="Previous slide">‹</button>
+    <div class="counter" id="counter">1 / 11</div>
+    <button id="next" aria-label="Next slide">›</button>
+  </nav>
+
+  <script>
+    const track = document.getElementById('track');
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const prev = document.getElementById('prev');
+    const next = document.getElementById('next');
+    const counter = document.getElementById('counter');
+    const progressBar = document.getElementById('progressBar');
+    const sharedOrb = document.getElementById('sharedOrb');
+    const compareDividerTextOverlay = document.getElementById('compareDividerTextOverlay');
+    const orbStates = [
+      { x: '25.5%', y: '72.5%', size: '420px', scale: '1', opacity: '0.58', blur: '0px', variant: 'soft' },
+      { x: '71.5%', y: '51%', size: '320px', scale: '1', opacity: '0.68', blur: '0px', variant: 'soft', compact: true },
+      { x: '50%', y: '50%', size: '520px', scale: '1', opacity: '0.85', blur: '0px', variant: 'divider' },
+      { x: '50%', y: '50%', size: '240px', scale: '0.62', opacity: '0', blur: '0px', variant: 'soft', compact: true },
+      { x: '66%', y: '49.2%', size: '540px', scale: '1', opacity: '0.76', blur: '0px', variant: 'workspace' },
+      { x: '50%', y: '50%', size: '520px', scale: '1', opacity: '0.85', blur: '0px', variant: 'divider' },
+      { x: '50%', y: '50%', size: '250px', scale: '1', opacity: '0.86', blur: '0px', variant: 'but-divider', compact: true, target: 'compare-divider' },
+      { x: '50%', y: '50%', size: '500px', scale: '0.98', opacity: '0.84', blur: '0px', variant: 'divider' },
+      { x: '50%', y: '50%', size: '240px', scale: '0.62', opacity: '0', blur: '0px', variant: 'soft', compact: true },
+      { x: '50%', y: '34%', size: '230px', scale: '1', opacity: '0.78', blur: '0px', variant: 'soft', compact: true },
+      { x: '50%', y: '50%', size: '520px', scale: '1.04', opacity: '0.88', blur: '0px', variant: 'divider' }
+    ];
+    let index = 0;
+    let touchStartX = 0;
+
+    let compareDividerTextTimer = null;
+
+    function layoutBoxRelativeTo(element, ancestor) {
+      let x = 0;
+      let y = 0;
+      let node = element;
+
+      while (node && node !== ancestor) {
+        x += node.offsetLeft || 0;
+        y += node.offsetTop || 0;
+        node = node.offsetParent;
+      }
+
+      if (node !== ancestor) {
+        const elementRect = element.getBoundingClientRect();
+        const ancestorRect = ancestor.getBoundingClientRect();
+        return {
+          x: elementRect.left - ancestorRect.left,
+          y: elementRect.top - ancestorRect.top,
+          width: elementRect.width,
+          height: elementRect.height
+        };
+      }
+
+      return {
+        x,
+        y,
+        width: element.offsetWidth,
+        height: element.offsetHeight
+      };
+    }
+
+    function getCompareDividerOrbTarget() {
+      const slide = slides[6];
+      if (!slide) return null;
+
+      const leftCard = slide.querySelector('.compare-card:not(.compare-card-dark)');
+      const rightCard = slide.querySelector('.compare-card-dark');
+      const label = slide.querySelector('.compare-divider.is-shared-orb-label');
+      if (!leftCard || !rightCard || !label) return null;
+
+      const leftBox = layoutBoxRelativeTo(leftCard, slide);
+      const rightBox = layoutBoxRelativeTo(rightCard, slide);
+      const labelBox = layoutBoxRelativeTo(label, slide);
+
+      const x = (leftBox.x + leftBox.width + rightBox.x) / 2;
+      const y = ((leftBox.y + leftBox.height / 2) + (rightBox.y + rightBox.height / 2)) / 2;
+      const size = Math.max(labelBox.width, labelBox.height);
+
+      return { x: `${x}px`, y: `${y}px`, size: `${size}px`, label };
+    }
+
+    function hideCompareDividerText() {
+      const label = document.querySelector('.compare-divider.is-shared-orb-label');
+      if (compareDividerTextTimer) {
+        window.clearTimeout(compareDividerTextTimer);
+        compareDividerTextTimer = null;
+      }
+      if (label) label.classList.remove('is-text-visible');
+      if (compareDividerTextOverlay) compareDividerTextOverlay.classList.remove('is-visible');
+    }
+
+    function updateSharedOrb() {
+      const baseState = orbStates[index] || orbStates[0];
+      const state = { ...baseState };
+      const compareTarget = state.target === 'compare-divider' ? getCompareDividerOrbTarget() : null;
+
+      hideCompareDividerText();
+
+      if (compareTarget) {
+        state.x = compareTarget.x;
+        state.y = compareTarget.y;
+        state.size = compareTarget.size;
+        state.scale = '1';
+        state.opacity = '0.86';
+        state.blur = '0px';
+
+        if (compareDividerTextOverlay) {
+          compareDividerTextOverlay.style.setProperty('--but-x', compareTarget.x);
+          compareDividerTextOverlay.style.setProperty('--but-y', compareTarget.y);
+          compareDividerTextOverlay.style.setProperty('--but-size', compareTarget.size);
+        }
+      }
+
+      sharedOrb.style.setProperty('--orb-x', state.x);
+      sharedOrb.style.setProperty('--orb-y', state.y);
+      sharedOrb.style.setProperty('--orb-size', state.size);
+      sharedOrb.style.setProperty('--orb-scale', state.scale);
+      sharedOrb.style.setProperty('--orb-opacity', state.opacity);
+      sharedOrb.style.setProperty('--orb-blur', state.blur || '0px');
+      sharedOrb.classList.remove('is-soft', 'is-workspace', 'is-compact', 'is-but-divider');
+      if (state.variant === 'soft') sharedOrb.classList.add('is-soft');
+      if (state.variant === 'workspace') sharedOrb.classList.add('is-workspace');
+      if (state.variant === 'but-divider') sharedOrb.classList.add('is-but-divider');
+      if (state.compact) sharedOrb.classList.add('is-compact');
+
+      if (compareTarget) {
+        compareDividerTextTimer = window.setTimeout(() => {
+          if (compareDividerTextOverlay) compareDividerTextOverlay.classList.add('is-visible');
+          compareDividerTextTimer = null;
+        }, 940);
+      }
+    }
+
+    function updateSlide(nextIndex) {
+      index = Math.max(0, Math.min(slides.length - 1, nextIndex));
+      track.style.transform = `translateX(${-index * 100}vw)`;
+      slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+      counter.textContent = `${index + 1} / ${slides.length}`;
+      progressBar.style.width = `${((index + 1) / slides.length) * 100}%`;
+      updateSharedOrb();
+    }
+
+    prev.addEventListener('click', () => updateSlide(index - 1));
+    next.addEventListener('click', () => updateSlide(index + 1));
+
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowRight' || event.key === 'PageDown' || event.key === ' ') updateSlide(index + 1);
+      if (event.key === 'ArrowLeft' || event.key === 'PageUp') updateSlide(index - 1);
+      if (event.key === 'Home') updateSlide(0);
+      if (event.key === 'End') updateSlide(slides.length - 1);
+    });
+
+    window.addEventListener('touchstart', (event) => {
+      touchStartX = event.changedTouches[0].clientX;
+    }, { passive: true });
+
+    window.addEventListener('touchend', (event) => {
+      const dx = event.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) > 60) updateSlide(index + (dx < 0 ? 1 : -1));
+    }, { passive: true });
+
+    window.addEventListener('mousemove', (event) => {
+      const x = (event.clientX / window.innerWidth - 0.5) * 18;
+      const y = (event.clientY / window.innerHeight - 0.5) * 18;
+      document.body.style.setProperty('--mx', `${x}px`);
+      document.body.style.setProperty('--my', `${y}px`);
+    });
+
+    window.addEventListener('resize', () => updateSharedOrb());
+
+
+    function initCourseProjectDrag() {
+      const stage = document.getElementById('courseProjectStage');
+      const dropZone = document.getElementById('aiProjectDropZone');
+      if (!stage || !dropZone) return;
+
+      const cards = Array.from(stage.querySelectorAll('.context-card'));
+      let activeDrag = null;
+      let dropOrder = 0;
+      let allCardsFeedbackPlayed = false;
+
+      const triggerSharedOrbCompletion = () => {
+        if (!sharedOrb) return;
+
+        sharedOrb.classList.remove('is-complete-feedback');
+        void sharedOrb.offsetWidth;
+        sharedOrb.classList.add('is-complete-feedback');
+        window.setTimeout(() => sharedOrb.classList.remove('is-complete-feedback'), 1420);
+      };
+
+      const checkAllCardsDropped = () => {
+        const allDropped = cards.length > 0 && cards.every((card) => card.classList.contains('is-dropped'));
+
+        if (allDropped && !allCardsFeedbackPlayed) {
+          allCardsFeedbackPlayed = true;
+          triggerSharedOrbCompletion();
+          dropZone.classList.add('is-complete');
+          window.setTimeout(() => dropZone.classList.remove('is-complete'), 760);
+        }
+
+        if (!allDropped) {
+          allCardsFeedbackPlayed = false;
+        }
+      };
+
+      const cssNumber = (element, name) => {
+        const value = getComputedStyle(element).getPropertyValue(name).trim();
+        return Number.parseFloat(value) || 0;
+      };
+
+      const setCardPosition = (card, x, y, rotation = '0deg') => {
+        card.style.setProperty('--x', `${x}px`);
+        card.style.setProperty('--y', `${y}px`);
+        card.style.setProperty('--r', rotation);
+        card.dataset.x = String(x);
+        card.dataset.y = String(y);
+      };
+
+      const pointInDropZone = (clientX, clientY) => {
+        const rect = dropZone.getBoundingClientRect();
+        return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+      };
+
+      const getSlotPosition = (slot) => {
+        const stageRect = stage.getBoundingClientRect();
+        const zoneRect = dropZone.getBoundingClientRect();
+        const col = slot % 2;
+        const row = Math.floor(slot / 2);
+        const x = zoneRect.left - stageRect.left + 28 + col * 174;
+        const y = zoneRect.top - stageRect.top + 70 + row * 54;
+        return { x, y };
+      };
+
+      const snapToDropSlot = (card) => {
+        if (!card.dataset.dropSlot) {
+          card.dataset.dropSlot = String(dropOrder++);
+        }
+
+        const slot = Number(card.dataset.dropSlot);
+        const { x, y } = getSlotPosition(slot);
+        card.classList.add('is-dropped');
+        setCardPosition(card, x, y, '0deg');
+
+        dropZone.classList.add('has-items', 'is-complete');
+        window.setTimeout(() => dropZone.classList.remove('is-complete'), 760);
+        checkAllCardsDropped();
+      };
+
+      const returnHome = (card) => {
+        card.classList.remove('is-dropped');
+        card.dataset.dropSlot = '';
+        setCardPosition(card, Number(card.dataset.homeX), Number(card.dataset.homeY), card.dataset.homeR);
+        checkAllCardsDropped();
+      };
+
+      cards.forEach((card) => {
+        card.dataset.homeX = String(cssNumber(card, '--x'));
+        card.dataset.homeY = String(cssNumber(card, '--y'));
+        card.dataset.homeR = getComputedStyle(card).getPropertyValue('--r').trim() || '0deg';
+        card.dataset.x = card.dataset.homeX;
+        card.dataset.y = card.dataset.homeY;
+
+        card.addEventListener('pointerdown', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+
+          card.setPointerCapture(event.pointerId);
+          activeDrag = {
+            card,
+            pointerId: event.pointerId,
+            startPointerX: event.clientX,
+            startPointerY: event.clientY,
+            startX: Number(card.dataset.x),
+            startY: Number(card.dataset.y),
+            wasDropped: card.classList.contains('is-dropped')
+          };
+
+          card.classList.add('is-dragging');
+          dropZone.classList.toggle('is-hot', pointInDropZone(event.clientX, event.clientY));
+        });
+
+        card.addEventListener('pointermove', (event) => {
+          if (!activeDrag || activeDrag.card !== card) return;
+
+          const x = activeDrag.startX + event.clientX - activeDrag.startPointerX;
+          const y = activeDrag.startY + event.clientY - activeDrag.startPointerY;
+          setCardPosition(card, x, y, '0deg');
+          dropZone.classList.toggle('is-hot', pointInDropZone(event.clientX, event.clientY));
+        });
+
+        card.addEventListener('pointerup', (event) => {
+          if (!activeDrag || activeDrag.card !== card) return;
+
+          card.releasePointerCapture(event.pointerId);
+          card.classList.remove('is-dragging');
+          dropZone.classList.remove('is-hot');
+
+          if (pointInDropZone(event.clientX, event.clientY)) {
+            snapToDropSlot(card);
+          } else if (activeDrag.wasDropped) {
+            snapToDropSlot(card);
+          } else {
+            returnHome(card);
+          }
+
+          activeDrag = null;
+        });
+
+        card.addEventListener('pointercancel', () => {
+          if (!activeDrag || activeDrag.card !== card) return;
+
+          card.classList.remove('is-dragging');
+          dropZone.classList.remove('is-hot');
+          if (activeDrag.wasDropped) {
+            snapToDropSlot(card);
+          } else {
+            returnHome(card);
+          }
+          activeDrag = null;
+        });
+      });
+
+      window.addEventListener('resize', () => {
+        cards
+          .filter((card) => card.classList.contains('is-dropped'))
+          .forEach((card) => snapToDropSlot(card));
+      });
+    }
+
+
+    initCourseProjectDrag();
+    updateSlide(0);
+  </script>
+</body>
+</html>
